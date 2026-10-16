@@ -1,0 +1,17 @@
+# Secrets et données utilisateur
+credentials.json
+token.json
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+
+# Environnements et builds
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+*.spec.bak
+.DS_Store
