@@ -25,7 +25,11 @@ SCOPE = "https://www.googleapis.com/auth/gmail.modify"
 DATA_DIR = user_data_path("LocalGmailManager", appauthor=False)
 TOKEN_PATH = DATA_DIR / "token.json"
 APP_DIR = Path(__file__).resolve().parent
-CREDENTIALS_PATH = APP_DIR / "credentials.json"
+# Le fichier OAuth de l'utilisateur n'est jamais embarqué dans le programme.
+# Conserver l'emplacement historique en développement, utiliser le dossier
+# de données utilisateur dans une distribution PyInstaller.
+import sys
+CREDENTIALS_PATH = (DATA_DIR if getattr(sys, "frozen", False) else APP_DIR) / "credentials.json"
 _thread = threading.local()
 
 
