@@ -2,6 +2,43 @@
 
 Application **exécutée exclusivement sur ton ordinateur** (interface locale Streamlit et index SQLite) pour analyser, classer et nettoyer les emails Gmail via l'API Google OAuth2. Les échanges nécessaires s'effectuent directement entre ton PC et Gmail ; il ne s'agit pas d'un serveur hors de ton ordinateur.
 
+## 📥 Télécharger et lancer Gmail Manager (Windows, macOS, Linux)
+
+> **Distribution expérimentale :** les exécutables sont déjà générés par GitHub Actions, mais ne sont pas encore signés et n'ont pas été validés sur des ordinateurs utilisateurs. Il n'existe **pas encore de GitHub Release** publiée. Les fichiers actuellement disponibles sont les *artifacts* du [workflow de compilation réussi](https://github.com/cptblues/gmail-manager/actions/runs/38881199133) (connexion GitHub parfois nécessaire). Pour les futures versions stables, consulte [GitHub Releases](https://github.com/cptblues/gmail-manager/releases/latest) ou [toutes les Releases](https://github.com/cptblues/gmail-manager/releases). Les liens Releases ne proposeront des fichiers qu'après publication d'une version.
+
+| Système | Télécharger la compilation disponible | Démarrage après extraction |
+| --- | --- | --- |
+| **Windows 64 bits** | [GmailManager-Windows (artifact)](https://github.com/cptblues/gmail-manager/actions/runs/38881199133/artifacts/12037113497) | Ouvrir `GmailManager/GmailManager.exe` |
+| **macOS Apple Silicon (M1/M2/M3/M4…)** | [GmailManager-macOS (artifact)](https://github.com/cptblues/gmail-manager/actions/runs/38881199133/artifacts/12038190503) | Dans Terminal, lancer `./GmailManager` depuis le dossier extrait `GmailManager` |
+| **Linux x86_64** | [GmailManager-Linux (artifact)](https://github.com/cptblues/gmail-manager/actions/runs/38881199133/artifacts/12037756852) | Dans Terminal, lancer `./GmailManager` depuis le dossier extrait `GmailManager` |
+
+**Important :** les artifacts GitHub Actions peuvent expirer et sont fournis dans un ZIP GitHub qui contient lui-même l'archive de l'application (`.tar.gz` pour macOS et Linux). Extraire **les deux niveaux d'archive**, puis conserver **l'ensemble du dossier `GmailManager`** : l'exécutable ne marche pas isolément. Les binaires contiennent Python ; aucune installation de Python n'est requise pour les utiliser. La version macOS est actuellement une archive pour Apple Silicon, **pas un `.app` ou un `.dmg`** ; les Mac Intel ne sont pas encore couverts par ce build.
+
+### Première utilisation : configurer l'accès Google (obligatoire)
+
+Gmail Manager **ne demande jamais ton mot de passe Gmail**. Pour utiliser l'API Gmail, chaque utilisateur doit fournir son propre client OAuth Google :
+
+1. Créer un projet sur [Google Cloud](https://console.cloud.google.com/projectcreate), puis [activer Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com).
+2. Dans **Google Auth Platform**, configurer **Branding** et **Audience**, puis déclarer l'autorisation `https://www.googleapis.com/auth/gmail.modify` dans **Data Access** si nécessaire. Si l'application est en mode **Testing**, ajouter l'adresse Gmail du compte dans les **Test users**.
+3. Dans **Clients**, créer un client OAuth de type **Desktop app / Application de bureau** (et non Web), télécharger le JSON et le renommer exactement **`credentials.json`**.
+4. Pour la **version téléchargée (exécutable)**, mettre ce fichier dans le dossier utilisateur ci-dessous, à créer si nécessaire :
+
+   | Plateforme | Emplacement de `credentials.json` |
+   | --- | --- |
+   | Windows | `%LOCALAPPDATA%\\LocalGmailManager\\credentials.json` |
+   | macOS | `~/Library/Application Support/LocalGmailManager/credentials.json` |
+   | Linux | `~/.local/share/LocalGmailManager/credentials.json` (ou `$XDG_DATA_HOME/LocalGmailManager/` si défini) |
+
+5. Lancer le programme depuis le dossier extrait. Il démarre un serveur **uniquement sur ton PC** (`127.0.0.1`) et doit ouvrir l'interface dans le navigateur. Si elle ne s'ouvre pas, consulter l'adresse localhost affichée par le programme (en général [http://127.0.0.1:8501](http://127.0.0.1:8501) ; le port peut être différent).
+6. Cliquer sur **« Se connecter à Google »** dans la barre latérale, autoriser le compte via la page Google, puis commencer par un petit scan en lecture.
+
+**Confidentialité :** ne jamais partager `credentials.json`, `token.json` ni les bases SQLite. Le jeton d'accès et l'index sont enregistrés localement dans `LocalGmailManager`. L'application utilise l'autorisation Gmail `gmail.modify` : lire attentivement les droits accordés avant de continuer.
+
+**Attention aux avertissements :** Windows SmartScreen et macOS Gatekeeper peuvent avertir que le programme n'est pas signé/notarisé. Vérifier la provenance depuis ce dépôt avant toute autorisation. Sur macOS et Linux, si le fichier a perdu son droit d'exécution après extraction, utiliser `chmod +x GmailManager` dans le dossier extrait. Ne jamais exécuter un binaire venant d'une source inconnue.
+
+**Si tu utilises la version source** (`app.py`, scripts `start-linux.sh`, `start-windows.ps1`, `start-macos.sh`) : le fichier OAuth reste **à côté de `app.py`** comme auparavant. Consulter [DISTRIBUTION.md](DISTRIBUTION.md) pour les détails techniques et la section « Créer l'accès Gmail chez Google » ci-dessous pour le guide complet.
+
+
 ## Nouveautés de la v1.5
 
 - **Dossiers Gmail intégrés** : l'onglet **📁 Dossiers** affiche les libellés personnels existants (avec les compteurs **locaux**, issus de SQLite) et permet d'en créer. Seuls les libellés de type utilisateur sont proposés ; les catégories système Gmail ne sont pas des destinations.
@@ -65,7 +102,7 @@ Dans **📎 Pièces jointes**, choisis tous les emails concernés ou seulement l
 4. Dans **Audience** : https://console.cloud.google.com/auth/audience , si ton projet est en mode **Testing / Test**, ajoute **ton adresse Gmail** aux *Test users / Utilisateurs tests*.
 5. Dans **Data Access / Accès aux données** : https://console.cloud.google.com/auth/data-access , si l'interface le demande, déclare la permission : `https://www.googleapis.com/auth/gmail.modify`.
 6. Dans **Clients** : https://console.cloud.google.com/auth/clients , **Create client / Créer un client** → type **Desktop app / Application de bureau**. Donne-lui un nom.
-7. **Télécharge le JSON** des identifiants OAuth, renomme-le **`credentials.json`** et mets-le **à côté de `app.py`** dans le dossier décompressé. Il ne s'agit **pas** d'un token ni de ton mot de passe.
+7. **Télécharge le JSON** des identifiants OAuth et renomme-le **`credentials.json`**. **Version source :** mets-le à côté de `app.py`. **Exécutable téléchargé :** place-le dans le dossier utilisateur `LocalGmailManager` indiqué dans le tableau « Première utilisation » plus haut. Il ne s'agit **pas** d'un token ni de ton mot de passe.
 
 ### Mode test ou mode production ?
 
@@ -140,7 +177,7 @@ Tu **n'as pas besoin de créer manuellement un token** ; OAuth2 s'en charge.
 
 ## Limites de cette version
 
-- Ce MVP est un **outil local**, pas une application desktop compilée. Son interface s'ouvre dans le navigateur sur `localhost`.
+- L'interface reste **Streamlit dans le navigateur** sur `localhost`, y compris dans les archives exécutables : ce n'est pas une fenêtre desktop native.
 - L’indexation des **nouveaux emails** nécessite **une requête Gmail par email**, plus la pagination. Les requêtes sont limitées en débit et traitées avec 2 workers ; l’analyse de grandes boîtes peut donc prendre du temps. La même recherche réutilise le cache SQLite à moins que tu demandes une actualisation complète.
 - Certaines PJ embarquées ou messages MIME atypiques peuvent ne pas être reconnus. Les emails concernés ne sont pas mis à la corbeille après une sauvegarde incomplète.
 - Pas de planification automatique, d'export MBOX, de dédoublonnage sémantique ni de désabonnement automatique dans cette v1.5.
