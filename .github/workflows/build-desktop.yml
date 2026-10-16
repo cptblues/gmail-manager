@@ -1,0 +1,66 @@
+name: Build desktop packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows
+            artifact: GmailManager-Windows
+          - os: macos-14
+            label: macOS
+            artifact: GmailManager-macOS
+          - os: ubuntu-22.04
+            label: Linux
+            artifact: GmailManager-Linux
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller>=6,<7
+      - name: Core tests
+        run: python -m unittest discover -s tests -v
+      - name: Bundle
+        run: python -m PyInstaller --noconfirm gmail_manager.spec
+      - name: Windows archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path dist/GmailManager -DestinationPath GmailManager-Windows.zip
+      - name: macOS/Linux archive
+        if: runner.os != 'Windows'
+        shell: bash
+        run: tar -czf "${{ matrix.artifact }}.tar.gz" -C dist GmailManager
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            GmailManager-Windows.zip
+            GmailManager-macOS.tar.gz
+            GmailManager-Linux.tar.gz
+          if-no-files-found: error
+      - name: Publish tag asset
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then file="GmailManager-Windows.zip"; else file="${{ matrix.artifact }}.tar.gz"; fi
+          gh release view "${{ github.ref_name }}" >/dev/null 2>&1 || gh release create "${{ github.ref_name }}" --title "${{ github.ref_name }}" --notes "Builds multiplateformes expérimentaux (non signés)."
+          gh release upload "${{ github.ref_name }}" "$file" --clobber
