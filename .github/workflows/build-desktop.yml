@@ -34,9 +34,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt "pyinstaller>=6,<7"
+          python -m pip install -r requirements.txt "pyinstaller>=6,<7" pytest
       - name: Core tests
-        run: python -m unittest discover -s tests -v
+        run: python -m pytest tests -v
       - name: Bundle
         run: python -m PyInstaller --noconfirm gmail_manager.spec
       - name: Windows archive
